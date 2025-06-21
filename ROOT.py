@@ -474,6 +474,11 @@ class TF1:
         self.parameters = list(params)
         self._compile()
 
+    def GetParameter(self, index):
+        if 0 <= index < len(self.parameters):
+            return self.parameters[index]
+        return 0
+
     def _compile(self):
         """Compile the formula to a fast lambda"""
         code = f"lambda x, p: {self.formula}"
@@ -499,18 +504,41 @@ class TF1:
         return np.max(y) * 1.2 if len(y) > 0 else 1.0
 
     def Draw(self, option=""):
+        import matplotlib.pyplot as plt  # Always import here, unconditionally
         x = np.linspace(self.xmin, self.xmax, 1000)
         y = self._eval_function(x, *self.parameters)
 
-        if "SAME" not in option.upper():
-            import matplotlib.pyplot as plt
+        same_plot = "SAME" in option.upper()
+
+        if not same_plot:
             plt.figure(figsize=(10, 7))
+
         plt.plot(x, y, 'r-', linewidth=2, label=self.name)
-        plt.xlabel('x')
-        plt.ylabel('f(x)')
-        plt.title(self.name)
-        plt.grid(True, alpha=0.3)
-        plt.legend()
+
+        if not same_plot:
+            plt.xlabel('x')
+            plt.ylabel('f(x)')
+            plt.title(self.name)
+            plt.grid(True, alpha=0.3)
+            plt.legend()
+
+
+
+
+    def GetChisquare(self):
+        return getattr(self, "chi2", 0)
+
+    def GetNDF(self):
+        return getattr(self, "ndf", 0)
+
+
+    def GetProb(self):
+        from scipy.stats import chi2 as chi2dist
+        if self.ndf > 0:
+            return 1.0 - chi2dist.cdf(self.chi2, self.ndf)
+        return 0.0
+
+
 
 #----------------------------------------------------------------------------------------------#
 class TH1F:
@@ -633,7 +661,9 @@ class TH1F:
                     
             except Exception as e:
                 print(f"[ERROR] Fit failed: {e}")
-    
+
+
+
     def Draw(self, option=""):
         """Updated Draw method using enhanced color support"""
         bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
