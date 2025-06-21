@@ -663,50 +663,83 @@ class TH1F:
                 print(f"[ERROR] Fit failed: {e}")
 
 
-
     def Draw(self, option=""):
-        """Updated Draw method using enhanced color support"""
+        """
+        Draw the histogram using matplotlib.
+        Supports ROOT-like options: "HIST", "E", "SAME", "LOG".
+        """
+        import matplotlib.pyplot as plt
+
         bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
         bin_width = self.bin_edges[1] - self.bin_edges[0]
-        
-        # Use enhanced color mapping
+
+        # Get styling
         line_color = getattr(self, '_mpl_line_color', ROOTColors.get_color(self.line_color))
         fill_color = getattr(self, '_mpl_fill_color', line_color)
         line_style = getattr(self, '_mpl_line_style', '-')
         marker = getattr(self, '_mpl_marker', 'o')
-        
+    
         same_plot = "SAME" in option.upper()
-        
+        error_plot = "E" in option.upper()
+        log_plot = "LOG" in option.upper()
+
         if not same_plot:
             plt.figure(figsize=(10, 7))
-        
-        if "E" in option.upper():
-            plt.errorbar(bin_centers, self.counts, yerr=self.errors,
-                        fmt=marker, color=line_color, markersize=self.marker_size*3,
-                        capsize=3, linewidth=self.line_width, 
-                        linestyle=line_style, label=self.name)
-        elif "HIST" in option.upper() or option == "":
-            plt.step(bin_centers, self.counts, where='mid', 
-                    color=line_color, linewidth=self.line_width, 
-                    linestyle=line_style, label=self.name)
+
+        if error_plot:
+            plt.errorbar(
+                bin_centers,
+                self.counts,
+                yerr=self.errors,
+                fmt=marker,
+                color=line_color,
+                markersize=self.marker_size * 3,
+                capsize=3,
+                linewidth=self.line_width,
+                linestyle=line_style,
+                label=self.name
+            )
+        elif "HIST" in option.upper() or option.strip() == "":
+            plt.step(
+                bin_centers,
+                self.counts,
+                where="mid",
+                color=line_color,
+                linewidth=self.line_width,
+                linestyle=line_style,
+                label=self.name
+            )
         else:
             alpha = 0.7 if self.fill_color == 0 else 0.9
-            plt.bar(bin_centers, self.counts, width=bin_width,
-                   align='center', edgecolor=line_color, alpha=alpha,
-                   color=fill_color, linewidth=self.line_width,
-                   label=self.name)
-        
+            plt.bar(
+                bin_centers,
+                self.counts,
+                width=bin_width,
+                align='center',
+                edgecolor=line_color,
+                alpha=alpha,
+                color=fill_color,
+                linewidth=self.line_width,
+                label=self.name
+            )
+
+        if log_plot:
+            plt.yscale("log")
+
         if not same_plot:
             plt.xlabel("Value")
-            plt.ylabel("Counts") 
+            plt.ylabel("Counts")
             plt.title(self.title)
             plt.grid(True, alpha=0.3)
-        from ROOT import TCanvas  # import only if ROOT is your wrapper module
+            plt.legend()
+
+    # Save if using canvas
+        from ROOT import TCanvas
         canvas = TCanvas._current_canvas
         if canvas:
             default_filename = f"{self.name}.png"
             canvas.SaveAs(default_filename)
- 
+
 ###############################################################################
 
     def FillRandom(self, func_name, nevents=10000):
@@ -750,6 +783,24 @@ class TH1F:
         else:
             raise ValueError(f"[ERROR] Unknown built-in function: {name}")
 
+
+    def GetEntries(self):
+        return float(np.sum(self.counts))
+    def GetMean(self):
+        bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
+        total = np.sum(self.counts)
+        if total == 0:
+            return 0.0
+        return float(np.sum(bin_centers * self.counts) / total)
+
+    def GetRMS(self):
+        mean = self.GetMean()
+        bin_centers = 0.5 * (self.bin_edges[:-1] + self.bin_edges[1:])
+        total = np.sum(self.counts)
+        if total == 0:
+            return 0.0
+        variance = np.sum(((bin_centers - mean) ** 2) * self.counts) / total
+        return float(np.sqrt(variance))
 
 
 
