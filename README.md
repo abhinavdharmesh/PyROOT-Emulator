@@ -55,13 +55,16 @@ for value in data:
 fit_func = ROOT.TF1.builtin("gaus")
 hist.Fit(fit_func)
 
+# Create canvas first
+canvas = ROOT.TCanvas("c", "Histogram Canvas", 800, 600)
+
 # Draw histogram and fit
 hist.Draw("HIST")
 fit_func.Draw("SAME")
 
 # Save to file
-canvas = ROOT.TCanvas("c", "Histogram Canvas", 800, 600)
 canvas.SaveAs("histogram.png")
+
 ```
 
 ## 🔐 Security Note on `eval()`
